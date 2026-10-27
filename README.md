@@ -88,5 +88,6 @@ references only — all are GPL/AGPL, so nothing is vendored from them.
 This tool only produces media of people who have explicitly consented, it
 marks every output as synthetic (visible + invisible + C2PA), and it refuses
 to run otherwise. It contains no detection-evasion or impersonation
-functionality by design. Legal compliance notes live in
-[`docs/compliance.md`](docs/compliance.md) (planned, M7).
+functionality by design. The consent policy this enforces is
+[`docs/consent-policy.md`](docs/consent-policy.md); legal compliance notes
+live in [`docs/compliance.md`](docs/compliance.md) (planned, M7).
