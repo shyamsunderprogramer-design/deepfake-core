@@ -1,0 +1,32 @@
+# Model registry (plan §12, §15: weights are downloadable assets, never committed).
+# Each entry maps a role to a local ONNX file plus integrity metadata.
+# `deepfake doctor` reports which of these are present and hash-verified.
+#
+# NOTE on licenses: inswapper_128 and the insightface buffalo_l pack are
+# non-commercial research weights; GFPGAN is Apache-2.0. Check each upstream
+# license before any commercial distribution.
+models:
+  - name: scrfd_det_10g
+    role: detector
+    file: scrfd_10g_bnkps.onnx
+    input_size: [640, 640]
+    sha256: null  # fill after download; doctor warns while null
+    source: insightface buffalo_l model zoo (det_10g)
+  - name: arcface_r100
+    role: identity_encoder
+    file: w600k_r50.onnx
+    input_size: [112, 112]
+    sha256: null
+    source: insightface buffalo_l model zoo (recognition)
+  - name: inswapper_128
+    role: swap
+    file: inswapper_128.onnx
+    input_size: [128, 128]
+    sha256: null
+    source: insightface model zoo (non-commercial)
+  - name: gfpgan_v14
+    role: restore
+    file: GFPGANv1.4.onnx
+    input_size: [512, 512]
+    sha256: null
+    source: TencentARC/GFPGAN (Apache-2.0)

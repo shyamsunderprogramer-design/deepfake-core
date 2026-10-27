@@ -1,0 +1,13 @@
+{
+  "identity_id": "string_id",
+  "display_name": "string_name",
+  "identity_hash": "<sha256 hash>",
+  "scope": {
+    "projects": ["project_name_a"],
+    "uses": ["realtime"] 
+  },
+  "issued_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "expires_at": "optional_iso_datetime_string",
+  "revoked": false,
+  "revocation_contact": "email@example.com"
+}
