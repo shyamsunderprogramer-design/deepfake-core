@@ -47,11 +47,29 @@ def _crc16_ccitt(data: bytes) -> int:
 
 
 def make_payload(
-    generator_id: str, consent_id: str, model_version: str, timestamp_iso: str
+    generator_id: str,
+    consent_id: str,
+    model_version: str,
+    timestamp_iso: str,
+    key: Optional[bytes] = None,
 ) -> bytes:
-    """32-byte sha256 payload tying the output to generator/consent/version/time."""
+    """32-byte payload tying the output to generator/consent/version/time.
+
+    Without `key` this is a plain sha256 — adequate for *detection* ("is this
+    output marked") but forgeable as *attribution* (anyone can recompute the
+    same digest). Pass an installation secret (pipeline wires
+    DEEPFAKE_WM_KEY) and the payload becomes an HMAC-SHA256, so third parties
+    cannot mint marks attributable to this installation. Attribution
+    authenticity ultimately rests on the embedded, signed C2PA path — this
+    mark is the durable fallback, and verify() only ever proves presence.
+    """
     material = "|".join([generator_id, consent_id, model_version, timestamp_iso])
-    return hashlib.sha256(material.encode("utf-8")).digest()
+    raw = material.encode("utf-8")
+    if key:
+        import hmac
+
+        return hmac.new(key, raw, hashlib.sha256).digest()
+    return hashlib.sha256(raw).digest()
 
 
 def _payload_bits(payload32: bytes) -> np.ndarray:

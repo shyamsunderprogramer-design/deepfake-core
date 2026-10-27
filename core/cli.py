@@ -90,7 +90,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             _check(f"model {entry.name}", False, f"missing {entry.file}")
         else:
             h = entry.hash_ok()
-            detail = "hash ok" if h else ("sha256 not pinned in registry.yaml" if h is None else "HASH MISMATCH")
+            detail = "hash ok" if h else ("NO sha256 pinned — supply-chain fail-open; pin it in registry.yaml" if h is None else "HASH MISMATCH")
             _check(f"model {entry.name}", h is not False, detail)
 
     try:
@@ -211,10 +211,11 @@ def _build_pipeline(args: argparse.Namespace, use: str):
         raise SystemExit(3)
 
     try:
-        det_session = model_sessions.get_session("detector")
-        enc_session = model_sessions.get_session("identity_encoder")
-        swp_session = model_sessions.get_session("swap")
-    except model_sessions.ModelMissing as exc:
+        unpinned = getattr(args, "allow_unpinned_models", False)
+        det_session = model_sessions.get_session("detector", allow_unpinned=unpinned)
+        enc_session = model_sessions.get_session("identity_encoder", allow_unpinned=unpinned)
+        swp_session = model_sessions.get_session("swap", allow_unpinned=unpinned)
+    except (model_sessions.ModelMissing, model_sessions.ModelUnpinned) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2)
 
@@ -342,6 +343,9 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--source", required=True, nargs="+", type=Path,
                        help="photo(s) of the consented identity (embeddings are averaged)")
         p.add_argument("--project", required=True, help="project scope (must be in the consent record)")
+        p.add_argument("--allow-unpinned-models", dest="allow_unpinned_models",
+                       action="store_true",
+                       help="dev only: load model files whose registry sha256 is not pinned")
 
     p_swap = sub.add_parser("swap", help="swap a consented identity into a target image")
     _add_source_args(p_swap)

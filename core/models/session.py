@@ -44,6 +44,13 @@ class ModelHashMismatch(RuntimeError):
     """Local file's sha256 does not match the registry entry."""
 
 
+class ModelUnpinned(RuntimeError):
+    """Registry entry has no sha256 pin — refusal to load prevents a
+    fail-open supply-chain hole (a swapped or poisoned weight file would
+    load silently). Pass allow_unpinned=True / --allow-unpinned-models to
+    override explicitly during development."""
+
+
 class ModelEntry:
     """One registry row."""
 
@@ -101,16 +108,29 @@ def providers_for_role(role: str) -> List:
 _sessions: Dict[str, "ort.InferenceSession"] = {}
 
 
-def get_session(role: str, *, force_reload: bool = False) -> "ort.InferenceSession":
-    """Lazily build (and cache) a session for the registry model of `role`."""
+def get_session(
+    role: str, *, force_reload: bool = False, allow_unpinned: bool = False
+) -> "ort.InferenceSession":
+    """Lazily build (and cache) a session for the registry model of `role`.
+
+    Fails closed on integrity: a pinned sha256 that mismatches raises, and an
+    unpinned entry raises unless allow_unpinned is explicitly requested.
+    """
     e = entry_by_role(role)
     if not e.present():
         raise ModelMissing(
             f"{e.name} ({e.file}) is not in {config.MODELS_DIR}. Download the "
             "weights per assets/models/registry.yaml — they are not committed."
         )
-    if e.hash_ok() is False:
+    h = e.hash_ok()
+    if h is False:
         raise ModelHashMismatch(f"{e.file} sha256 does not match registry.yaml")
+    if h is None and not allow_unpinned:
+        raise ModelUnpinned(
+            f"{e.file} has no sha256 pinned in registry.yaml; fill it in after "
+            "downloading from the official source, or override with "
+            "--allow-unpinned-models (development only)."
+        )
     key = f"{role}:{e.path}"
     if force_reload or key not in _sessions:
         opts = ort.SessionOptions()

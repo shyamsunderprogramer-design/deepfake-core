@@ -54,7 +54,14 @@ def sign_output(
 
     cert = os.environ.get("DEEPFAKE_C2PA_CERT")
     key = os.environ.get("DEEPFAKE_C2PA_KEY")
-    if _HAS_C2PA and cert and key:
+    if cert and key:
+        # Credentials were explicitly configured: failing over to a sidecar
+        # would silently downgrade a promised embedded signature. Fail closed.
+        if not _HAS_C2PA:
+            raise RuntimeError(
+                "DEEPFAKE_C2PA_CERT/DEEPFAKE_C2PA_KEY are set but c2pa-python "
+                "is not installed; refusing to silently downgrade to a sidecar."
+            )
         try:  # pragma: no cover - exercised only with credentials configured
             manifest = {
                 "claim_generator": generator_id,
@@ -72,8 +79,10 @@ def sign_output(
             dest = path.with_name(path.stem + ".signed" + path.suffix)
             builder.sign_file(signer, str(path), str(dest))
             return {"mode": "embedded", "file": str(dest), "claims": claims}
-        except Exception:
-            pass  # fall through to the sidecar
+        except Exception as exc:  # fail closed with the cause attached
+            raise RuntimeError(
+                f"embedded C2PA signing failed for {path}: {exc}"
+            ) from exc
 
     sidecar = path.with_name(path.name + ".c2pa.json")
     sidecar.write_text(json.dumps(claims, indent=2) + "\n", encoding="utf-8")

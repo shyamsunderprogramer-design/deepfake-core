@@ -9,6 +9,7 @@ finalized output passes through the disclosure gate: badge + DCT watermark
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -85,8 +86,12 @@ class SwapPipeline:
         """Badge + invisible watermark + provenance, then write the file."""
         stamped = badge_mod.add_badge(bgr) if visible_badge else bgr
         ts = datetime.now(timezone.utc).isoformat()
+        # DEEPFAKE_WM_KEY (optional install secret) HMAC-keys the payload so
+        # third parties can't mint marks attributable to this installation.
+        key = os.environ.get("DEEPFAKE_WM_KEY")
         payload = wm_mod.make_payload(
-            __generator_id__, self.consent_record.identity_id, self.model_version, ts
+            __generator_id__, self.consent_record.identity_id, self.model_version, ts,
+            key=key.encode() if key else None,
         )
         marked = wm_mod.embed(stamped, payload)
         out_path = Path(out_path)
